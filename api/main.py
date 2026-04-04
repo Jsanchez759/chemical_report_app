@@ -12,8 +12,9 @@ from api.middlewares import logging_middleware
 from api.services import limiter
 from api.services.db import Base, engine
 from api.v1.routes.auth import router as v1_auth_router
-from api.v1.routes.create_report import router as v1_reports_router
-from api.v1.routes.list_reports import router as v1_list_reports_router
+from api.v1.routes.reports.create import router as v1_reports_router
+from api.v1.routes.reports.delete import router as v1_delete_reports_router
+from api.v1.routes.reports.list import router as v1_list_reports_router
 from src.utils.pdf_generator import PDF_OUTPUT_DIR
 
 # Configure logging
@@ -60,6 +61,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Include routers
 app.include_router(v1_reports_router, prefix=settings.api_v1_prefix)
 app.include_router(v1_list_reports_router, prefix=settings.api_v1_prefix)
+app.include_router(v1_delete_reports_router, prefix=settings.api_v1_prefix)
 app.include_router(v1_auth_router, prefix=settings.api_v1_prefix)
 
 

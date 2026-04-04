@@ -6,7 +6,7 @@ from api.models.reports_users import UserReport
 from api.models.user import User
 from api.services import get_db, limiter
 from api.v1.dependencies.auth import get_current_user
-from api.v1.schemas.new_report import ChemicalReportRequest, ChemicalReportResponse
+from api.v1.schemas.reports import ChemicalReportRequest, ChemicalReportResponse
 from src.generate_report import generate_one_chemical_report
 from src.utils.pdf_generator import generate_pdf_and_get_url
 
