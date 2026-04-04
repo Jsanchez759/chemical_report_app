@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 
 class ChemicalReportRequest(BaseModel):
@@ -14,3 +15,13 @@ class ChemicalReportRequest(BaseModel):
                 "chemical_compound": "C6H12O6"
             }
         }
+
+
+class ChemicalReportResponse(BaseModel):
+    id: int
+    title: str
+    pdf_url: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True

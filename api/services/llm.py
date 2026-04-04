@@ -13,7 +13,7 @@ class LLMService:
         )
         self.model = settings.llm_model
     
-    async def call_llm(self, prompt: str, system_prompt: str = None, temperature: float = 0.7) -> str:
+    async def call_llm(self, prompt: str, system_prompt: str = None) -> str:
                 
         logger.info(
             "llm_request_started",
@@ -32,7 +32,7 @@ class LLMService:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                temperature=temperature,
+                reasoning_effort="none"
             )
             
             llm_response = response.choices[0].message.content
