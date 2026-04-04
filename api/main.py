@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -12,6 +13,7 @@ from api.services import limiter
 from api.services.db import Base, engine
 from api.v1.routes.auth import router as v1_auth_router
 from api.v1.routes.reports import router as v1_reports_router
+from src.utils.pdf_generator import PDF_OUTPUT_DIR
 
 # Configure logging
 configure_logging()
@@ -26,6 +28,7 @@ async def lifespan(app: FastAPI):
         debug=settings.debug,
     )
     Base.metadata.create_all(bind=engine)
+    
     yield
     logger.info(
         "application_shutdown",
@@ -37,6 +40,9 @@ app = FastAPI(
     debug=settings.debug,
     lifespan=lifespan,
 )
+
+PDF_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/generated-pdfs", StaticFiles(directory=str(PDF_OUTPUT_DIR)), name="generated-pdfs")
 
 # Add middlewares
 app.add_middleware(

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class ChemicalReportResponse(BaseModel):
     id: int
     title: str
-    content: str
+    pdf_url: str
     created_at: datetime
     
     class Config:
