@@ -41,6 +41,10 @@ export default function App() {
   const [reportIds, setReportIds] = useState([]);
   const [reportDetail, setReportDetail] = useState(null);
   const [isWorking, setIsWorking] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatSending, setChatSending] = useState(false);
 
   const isAuthenticated = Boolean(token);
 
@@ -79,6 +83,8 @@ export default function App() {
     localStorage.removeItem(TOKEN_KEY);
     setReportIds([]);
     setReportDetail(null);
+    setChatMessages([]);
+    setChatInput("");
     setFeedback("Session closed.");
   }
 
@@ -167,9 +173,77 @@ export default function App() {
         throw new Error(data?.detail || raw || `HTTP ${response.status}`);
       }
       setReportDetail(data);
+      await onLoadChatHistory(reportId, tokenOverride);
       setFeedback(`Report #${reportId} ready.`);
     } catch (err) {
       setFeedback(status, `Load report failed: ${err.message}`);
+    }
+  }
+
+  async function onLoadChatHistory(reportId, tokenOverride = null) {
+    const headers = tokenOverride ? { Authorization: `Bearer ${tokenOverride}` } : authHeaders;
+    setChatLoading(true);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl.replace(/\/+$/, "")}/reports/${reportId}/chat/history?limit=50`,
+        { headers }
+      );
+      const raw = await response.text();
+      const data = parseJsonSafe(raw);
+      if (!response.ok) {
+        throw new Error(data?.detail || raw || `HTTP ${response.status}`);
+      }
+      setChatMessages(Array.isArray(data?.messages) ? data.messages : []);
+    } catch (err) {
+      setChatMessages([]);
+      setFeedback(status, `Load chat history failed: ${err.message}`);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  async function onSendChatMessage(event) {
+    event.preventDefault();
+    if (!reportDetail?.id || !chatInput.trim()) return;
+
+    const userText = chatInput.trim();
+    setChatSending(true);
+    setChatInput("");
+    setFeedback("Sending chat message...");
+
+    try {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `tmp-user-${Date.now()}`,
+          role: "user",
+          content: userText,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      const data = await request(`/reports/${reportDetail.id}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userText }),
+      });
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: `tmp-assistant-${Date.now()}`,
+          role: "assistant",
+          content: data.answer || "",
+          created_at: data.created_at || new Date().toISOString(),
+        },
+      ]);
+      setFeedback("Chat response received.");
+    } catch (err) {
+      setFeedback(status, `Chat failed: ${err.message}`);
+      await onLoadChatHistory(reportDetail.id);
+    } finally {
+      setChatSending(false);
     }
   }
 
@@ -322,8 +396,8 @@ export default function App() {
         </div>
       </header>
 
-      <main className="dashboard-grid">
-        <section className="panel panel-wide">
+      <main className="workspace-grid">
+        <aside className="panel panel-left">
           <div className="panel-head">
             <h3>Create New Report</h3>
           </div>
@@ -357,25 +431,9 @@ export default function App() {
               {isWorking ? "Generating..." : "Generate Report"}
             </button>
           </form>
-        </section>
+        </aside>
 
-        <section className="panel">
-          <div className="panel-head">
-            <h3>My Reports</h3>
-          </div>
-          <ul className="list">
-            {reportIds.map((id) => (
-              <li key={id}>
-                <button type="button" className="link-btn" onClick={() => onLoadReportDetail(id)}>
-                  Report #{id}
-                </button>
-              </li>
-            ))}
-            {reportIds.length === 0 && <li>No reports yet.</li>}
-          </ul>
-        </section>
-
-        <section className="panel panel-wide">
+        <section className="panel panel-center">
           <div className="panel-head">
             <h3>Report Review</h3>
           </div>
@@ -405,9 +463,68 @@ export default function App() {
                   {reportDetail.content || ""}
                 </ReactMarkdown>
               </div>
+
+              <h4>Chat About This Report</h4>
+              <div className="chat-panel">
+                <div className="chat-messages">
+                  {chatLoading && <p className="status">Loading chat history...</p>}
+                  {!chatLoading && chatMessages.length === 0 && (
+                    <p className="status">No messages yet. Ask something about this report.</p>
+                  )}
+                  {chatMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={message.role === "assistant" ? "chat-message assistant" : "chat-message user"}
+                    >
+                      <div className="chat-meta">
+                        <strong>{message.role === "assistant" ? "Assistant" : "You"}</strong>
+                        <span>{formatDate(message.created_at)}</span>
+                      </div>
+                      <div className="chat-content markdown-body">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content || ""}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <form className="chat-form" onSubmit={onSendChatMessage}>
+                  <textarea
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Ask a question about this report..."
+                    rows={3}
+                    disabled={chatSending}
+                  />
+                  <button type="submit" disabled={chatSending || !chatInput.trim()}>
+                    {chatSending ? "Sending..." : "Send Message"}
+                  </button>
+                </form>
+              </div>
             </article>
           )}
         </section>
+
+        <aside className="panel panel-right">
+          <div className="panel-head">
+            <h3>My Reports</h3>
+            <button type="button" className="secondary" onClick={() => onLoadMyReports()}>
+              Refresh
+            </button>
+          </div>
+          <p className="status">Total: {reportIds.length}</p>
+          <ul className="list">
+            {reportIds.map((id) => (
+              <li key={id}>
+                <button type="button" className="link-btn" onClick={() => onLoadReportDetail(id)}>
+                  Report #{id}
+                </button>
+              </li>
+            ))}
+            {reportIds.length === 0 && <li>No reports yet.</li>}
+          </ul>
+        </aside>
       </main>
 
       <footer className="dashboard-footer">

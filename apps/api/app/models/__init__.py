@@ -1,4 +1,5 @@
+from app.models.report_chat import ReportChatMessage
 from app.models.user import User
 from app.models.reports_users import UserReport
 
-__all__ = ["User", "UserReport"]
+__all__ = ["User", "UserReport", "ReportChatMessage"]

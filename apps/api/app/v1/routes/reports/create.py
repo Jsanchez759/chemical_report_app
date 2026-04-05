@@ -53,6 +53,9 @@ async def generate_report(
             title=new_report.title,
             content=new_report.content,
             base_url=str(request.base_url),
+            chemical_compound=new_report.chemical_compound,
+            prompt=new_report.prompt,
+            tokens_used=new_report.tokens_used,
         )
         new_report.pdf_url = pdf_url
         db.commit()

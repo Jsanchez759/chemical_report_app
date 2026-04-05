@@ -63,3 +63,26 @@ class ReportDetailResponse(BaseModel):
     pdf_url: str
     tokens_used: int
     created_at: datetime
+
+
+class ReportChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, description="User message for report chat")
+
+
+class ReportChatResponse(BaseModel):
+    report_id: int
+    answer: str
+    memory_messages_used: int
+    created_at: datetime
+
+
+class ReportChatMessageItem(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+
+class ReportChatHistoryResponse(BaseModel):
+    report_id: int
+    messages: list[ReportChatMessageItem]
