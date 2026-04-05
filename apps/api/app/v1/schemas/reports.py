@@ -51,3 +51,15 @@ class DeleteReportsRequest(BaseModel):
 
 class DeleteReportsResponse(BaseModel):
     ids: list[int]
+
+
+class ReportDetailResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    prompt: str
+    chemical_compound: str
+    content: str
+    pdf_url: str
+    tokens_used: int
+    created_at: datetime

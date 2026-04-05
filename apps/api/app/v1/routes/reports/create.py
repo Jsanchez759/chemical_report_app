@@ -12,7 +12,7 @@ from src.utils.pdf_generator import generate_pdf_and_get_url
 
 logger = get_logger(__name__) 
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter()
 
 
 @router.post("/generate_report", response_model=ChemicalReportResponse)

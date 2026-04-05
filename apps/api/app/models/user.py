@@ -12,4 +12,5 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    role = Column(String(20), nullable=False, default="user")
     created_at = Column(DateTime, default=datetime.now(timezone.utc))

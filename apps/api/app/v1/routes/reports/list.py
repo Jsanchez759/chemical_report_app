@@ -10,7 +10,7 @@ from app.v1.schemas.reports import GetReportsRequest, GetReportsResponse
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter()
 
 @router.get("/list_reports", response_model=GetReportsResponse)
 @limiter.limit("10/minute")

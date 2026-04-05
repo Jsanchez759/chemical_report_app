@@ -14,7 +14,7 @@ from src.utils.pdf_generator import PDF_OUTPUT_DIR
 
 logger = get_logger(__name__)
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter()
 
 
 def _delete_local_pdf(pdf_url: str) -> None:

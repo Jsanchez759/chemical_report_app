@@ -48,6 +48,7 @@ async def register(
         username=user_data.username,
         email=user_data.email,
         hashed_password=hashed_password,
+        role="user",
     )
     
     db.add(new_user)
@@ -88,12 +89,12 @@ async def login(
     
     # Create tokens
     access_token = create_access_token(
-        data={"user_id": user.id, "username": user.username, "type": "access"},
+        data={"user_id": user.id, "username": user.username, "role": user.role, "type": "access"},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
     
     refresh_token = create_access_token(
-        data={"user_id": user.id, "username": user.username, "type": "refresh"},
+        data={"user_id": user.id, "username": user.username, "role": user.role, "type": "refresh"},
         expires_delta=timedelta(days=7),
     )
     
@@ -133,7 +134,7 @@ async def refresh_access_token(
     
     # Create new access token
     new_access_token = create_access_token(
-        data={"user_id": user.id, "username": user.username, "type": "access"},
+        data={"user_id": user.id, "username": user.username, "role": user.role, "type": "access"},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
     
