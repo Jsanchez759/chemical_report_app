@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chemical Reports Admin</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Admin Panel</h1>
+      <div class="api-config">
+        <label for="apiBaseUrl">API Base URL</label>
+        <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000/api/v1" />
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Admin Login</h2>
+        <form id="loginForm" class="form-grid">
+          <label for="username">Username</label>
+          <input id="username" type="text" required />
+          <label for="password">Password</label>
+          <input id="password" type="password" required />
+          <button type="submit">Login</button>
+        </form>
+        <p id="authStatus" class="status">Not authenticated</p>
+      </section>
+
+      <section class="card">
+        <div class="section-header">
+          <h2>Users</h2>
+          <button id="loadUsersBtn" type="button">Load Users</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Reports</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-header">
+          <h2>All Reports</h2>
+          <button id="loadReportsBtn" type="button">Load Reports</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>User</th>
+                <th>Title</th>
+                <th>Tokens</th>
+                <th>Created</th>
+                <th>PDF</th>
+              </tr>
+            </thead>
+            <tbody id="allReportsTbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-header">
+          <h2 id="userReportsTitle">Reports By User</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Created</th>
+                <th>PDF</th>
+              </tr>
+            </thead>
+            <tbody id="userReportsTbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>
