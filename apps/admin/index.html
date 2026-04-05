@@ -3,96 +3,127 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chemical Reports Admin</title>
+    <title>ChemOps Control</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <h1>Admin Panel</h1>
-      <div class="api-config">
-        <label for="apiBaseUrl">API Base URL</label>
-        <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000/api/v1" />
-      </div>
-    </header>
+    <section id="authView" class="auth-view">
+      <div class="auth-card">
+        <div class="brand-block">
+          <img src="./assets/logo.svg" alt="ChemOps logo" class="brand-logo" />
+          <div>
+            <p class="brand-kicker">Administration Portal</p>
+            <h1>ChemOps Control</h1>
+            <p class="brand-subtitle">Secure access for users and report operations.</p>
+          </div>
+        </div>
 
-    <main class="layout">
-      <section class="card">
-        <h2>Admin Login</h2>
-        <form id="loginForm" class="form-grid">
+        <form id="loginForm" class="auth-form">
           <label for="username">Username</label>
-          <input id="username" type="text" required />
+          <input id="username" type="text" autocomplete="username" required />
+
           <label for="password">Password</label>
-          <input id="password" type="password" required />
-          <button type="submit">Login</button>
+          <input id="password" type="password" autocomplete="current-password" required />
+
+          <label for="apiBaseUrl">API Base URL</label>
+          <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000/api/v1" required />
+
+          <button id="loginBtn" type="submit">Sign In</button>
+          <p id="authStatus" class="status">Use an admin account to continue.</p>
         </form>
-        <p id="authStatus" class="status">Not authenticated</p>
-      </section>
+      </div>
+    </section>
 
-      <section class="card">
-        <div class="section-header">
-          <h2>Users</h2>
-          <button id="loadUsersBtn" type="button">Load Users</button>
+    <section id="dashboardView" class="dashboard hidden">
+      <header class="topbar">
+        <div class="brand-inline">
+          <img src="./assets/logo.svg" alt="ChemOps logo" class="brand-logo-small" />
+          <div>
+            <p class="brand-kicker">Administration Portal</p>
+            <h2>ChemOps Control</h2>
+          </div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Reports</th>
-                <th>Created</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="usersTbody"></tbody>
-          </table>
-        </div>
-      </section>
 
-      <section class="card">
-        <div class="section-header">
-          <h2>All Reports</h2>
-          <button id="loadReportsBtn" type="button">Load Reports</button>
+        <div class="top-actions">
+          <span id="sessionInfo" class="session-info">Authenticated</span>
+          <button id="logoutBtn" type="button" class="ghost-btn">Logout</button>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>User</th>
-                <th>Title</th>
-                <th>Tokens</th>
-                <th>Created</th>
-                <th>PDF</th>
-              </tr>
-            </thead>
-            <tbody id="allReportsTbody"></tbody>
-          </table>
-        </div>
-      </section>
+      </header>
 
-      <section class="card">
-        <div class="section-header">
-          <h2 id="userReportsTitle">Reports By User</h2>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Title</th>
-                <th>Created</th>
-                <th>PDF</th>
-              </tr>
-            </thead>
-            <tbody id="userReportsTbody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+      <main class="content-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>Users</h3>
+            <button id="loadUsersBtn" type="button">Refresh</button>
+          </div>
+          <p class="panel-subtitle">List users and drill into each user's reports.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Reports</th>
+                  <th>Created</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="usersTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>All Reports</h3>
+            <button id="loadReportsBtn" type="button">Refresh</button>
+          </div>
+          <p class="panel-subtitle">Global report timeline across all users.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>User</th>
+                  <th>Title</th>
+                  <th>Tokens</th>
+                  <th>Created</th>
+                  <th>PDF</th>
+                </tr>
+              </thead>
+              <tbody id="allReportsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel panel-wide">
+          <div class="panel-head">
+            <h3 id="userReportsTitle">Reports By User</h3>
+          </div>
+          <p class="panel-subtitle">Select a user from the Users table.</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Created</th>
+                  <th>PDF</th>
+                </tr>
+              </thead>
+              <tbody id="userReportsTbody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p id="dashboardStatus" class="status">Ready.</p>
+      </footer>
+    </section>
 
     <script src="./app.js"></script>
   </body>
-  </html>
+</html>

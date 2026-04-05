@@ -1,8 +1,9 @@
 # admin
 
-Minimal standalone admin panel (no build step).
+ChemOps Control: standalone admin panel (no build step).
 
 ## Features
+- Dedicated login page (dashboard blocked until authenticated)
 - Admin login against API (`/api/v1/auth/login`)
 - List users (`/api/v1/admin/users`)
 - List all reports (`/api/v1/admin/reports`)

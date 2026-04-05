@@ -1,8 +1,17 @@
-let accessToken = "";
+const TOKEN_KEY = "chemops_admin_token";
 
-const apiBaseUrlInput = document.getElementById("apiBaseUrl");
+let accessToken = localStorage.getItem(TOKEN_KEY) || "";
+
+const authView = document.getElementById("authView");
+const dashboardView = document.getElementById("dashboardView");
 const loginForm = document.getElementById("loginForm");
+const loginBtn = document.getElementById("loginBtn");
+const logoutBtn = document.getElementById("logoutBtn");
 const authStatus = document.getElementById("authStatus");
+const dashboardStatus = document.getElementById("dashboardStatus");
+const apiBaseUrlInput = document.getElementById("apiBaseUrl");
+const sessionInfo = document.getElementById("sessionInfo");
+
 const loadUsersBtn = document.getElementById("loadUsersBtn");
 const loadReportsBtn = document.getElementById("loadReportsBtn");
 const usersTbody = document.getElementById("usersTbody");
@@ -14,16 +23,39 @@ function getApiBaseUrl() {
   return apiBaseUrlInput.value.trim().replace(/\/+$/, "");
 }
 
-function setStatus(message, isError = false) {
+function setAuthStatus(message, isError = false) {
   authStatus.textContent = message;
   authStatus.classList.toggle("error", isError);
 }
 
+function setDashboardStatus(message, isError = false) {
+  dashboardStatus.textContent = message;
+  dashboardStatus.classList.toggle("error", isError);
+}
+
+function setViewAuthenticated(isAuthenticated) {
+  authView.classList.toggle("hidden", isAuthenticated);
+  dashboardView.classList.toggle("hidden", !isAuthenticated);
+}
+
+function clearTables() {
+  usersTbody.innerHTML = "";
+  allReportsTbody.innerHTML = "";
+  userReportsTbody.innerHTML = "";
+  userReportsTitle.textContent = "Reports By User";
+}
+
+function logout() {
+  accessToken = "";
+  localStorage.removeItem(TOKEN_KEY);
+  setViewAuthenticated(false);
+  clearTables();
+  setAuthStatus("Session closed. Login required.");
+}
+
 async function apiRequest(path, options = {}) {
   const headers = { ...(options.headers || {}) };
-  if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
-  }
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...options,
@@ -37,6 +69,10 @@ async function apiRequest(path, options = {}) {
       detail = data.detail || detail;
     } catch (_) {
       // noop
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      logout();
     }
     throw new Error(detail);
   }
@@ -53,6 +89,7 @@ function formatDate(value) {
 
 function renderUsers(users) {
   usersTbody.innerHTML = "";
+
   for (const user of users) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -62,15 +99,19 @@ function renderUsers(users) {
       <td>${user.role}</td>
       <td>${user.reports_count}</td>
       <td>${formatDate(user.created_at)}</td>
-      <td><button class="inline-btn" data-user-id="${user.id}" data-username="${user.username}">View Reports</button></td>
+      <td>
+        <button class="inline-btn" data-user-id="${user.id}" data-username="${user.username}">
+          View Reports
+        </button>
+      </td>
     `;
     usersTbody.appendChild(tr);
   }
 
-  usersTbody.querySelectorAll("button[data-user-id]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const userId = button.dataset.userId;
-      const username = button.dataset.username;
+  usersTbody.querySelectorAll("button[data-user-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const userId = btn.dataset.userId;
+      const username = btn.dataset.username;
       await loadReportsByUser(userId, username);
     });
   });
@@ -78,6 +119,7 @@ function renderUsers(users) {
 
 function renderAllReports(reports) {
   allReportsTbody.innerHTML = "";
+
   for (const report of reports) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -93,8 +135,9 @@ function renderAllReports(reports) {
 }
 
 function renderUserReports(reports, username) {
-  userReportsTitle.textContent = `Reports By User${username ? `: ${username}` : ""}`;
+  userReportsTitle.textContent = `Reports By User: ${username}`;
   userReportsTbody.innerHTML = "";
+
   for (const report of reports) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -110,22 +153,47 @@ function renderUserReports(reports, username) {
 async function loadUsers() {
   const data = await apiRequest("/admin/users?limit=100&offset=0");
   renderUsers(data.users || []);
+  sessionInfo.textContent = `Authenticated · ${data.total} users total`;
+  setDashboardStatus("Users loaded.");
 }
 
 async function loadAllReports() {
   const data = await apiRequest("/admin/reports?limit=100&offset=0");
   renderAllReports(data.reports || []);
+  setDashboardStatus(`All reports loaded (${data.total} total).`);
 }
 
 async function loadReportsByUser(userId, username) {
   const data = await apiRequest(`/admin/users/${userId}/reports?limit=100&offset=0`);
   renderUserReports(data.reports || [], username);
+  setDashboardStatus(`Loaded reports for user ${username}.`);
+}
+
+async function validateSession() {
+  if (!accessToken) {
+    setViewAuthenticated(false);
+    return;
+  }
+
+  try {
+    await apiRequest("/admin/users?limit=1&offset=0");
+    setViewAuthenticated(true);
+    setDashboardStatus("Session restored.");
+    await Promise.all([loadUsers(), loadAllReports()]);
+  } catch (error) {
+    logout();
+    setAuthStatus(`Please login again: ${error.message}`, true);
+  }
 }
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const username = document.getElementById("username").value.trim();
   const password = document.getElementById("password").value;
+
+  loginBtn.disabled = true;
+  setAuthStatus("Authenticating...");
 
   try {
     const tokenData = await apiRequest("/auth/login", {
@@ -133,25 +201,44 @@ loginForm.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
     });
+
     accessToken = tokenData.access_token;
-    setStatus("Authenticated. You can load users/reports.");
+    localStorage.setItem(TOKEN_KEY, accessToken);
+
+    await apiRequest("/admin/users?limit=1&offset=0");
+
+    setViewAuthenticated(true);
+    setDashboardStatus("Welcome. Loading data...");
+    await Promise.all([loadUsers(), loadAllReports()]);
   } catch (error) {
-    setStatus(`Login failed: ${error.message}`, true);
+    accessToken = "";
+    localStorage.removeItem(TOKEN_KEY);
+    setAuthStatus(`Login failed: ${error.message}`, true);
+  } finally {
+    loginBtn.disabled = false;
   }
+});
+
+logoutBtn.addEventListener("click", () => {
+  logout();
 });
 
 loadUsersBtn.addEventListener("click", async () => {
   try {
+    setDashboardStatus("Loading users...");
     await loadUsers();
   } catch (error) {
-    setStatus(`Failed to load users: ${error.message}`, true);
+    setDashboardStatus(`Failed to load users: ${error.message}`, true);
   }
 });
 
 loadReportsBtn.addEventListener("click", async () => {
   try {
+    setDashboardStatus("Loading all reports...");
     await loadAllReports();
   } catch (error) {
-    setStatus(`Failed to load reports: ${error.message}`, true);
+    setDashboardStatus(`Failed to load reports: ${error.message}`, true);
   }
 });
+
+validateSession();
