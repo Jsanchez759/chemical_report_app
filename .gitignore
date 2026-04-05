@@ -175,6 +175,10 @@ cython_debug/
 # App artifacts
 apps/api/generated_pdfs/
 apps/api/test.db
+apps/web/node_modules/
+apps/web/dist/
+apps/admin/node_modules/
+apps/admin/dist/
 
 # PyCharm
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
