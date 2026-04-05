@@ -23,4 +23,6 @@ dependencies = [
     "structlog>=25.5.0",
     "uvicorn[standard]>=0.43.0",
     "requests>=2.33.1",
+    "psycopg[binary]>=3.3.3",
+    "psycopg2-binary>=2.9.11",
 ]
