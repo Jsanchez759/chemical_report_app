@@ -32,7 +32,7 @@ class LLMService:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
-                reasoning_effort="none"
+                reasoning_effort="minimal"
             )
             
             llm_response = response.choices[0].message.content

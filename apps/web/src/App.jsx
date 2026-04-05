@@ -1,7 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+import logo from "./assets/logo.svg";
 
 const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
-const TOKEN_KEY = "chemical_report_web_token";
+const TOKEN_KEY = "chemreport_user_token";
 
 function parseJsonSafe(text) {
   try {
@@ -11,22 +15,22 @@ function parseJsonSafe(text) {
   }
 }
 
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 export default function App() {
   const [apiBaseUrl, setApiBaseUrl] = useState(DEFAULT_API_BASE_URL);
   const [token, setToken] = useState(localStorage.getItem(TOKEN_KEY) || "");
-  const [status, setStatus] = useState("Ready");
+  const [status, setStatus] = useState("Ready.");
   const [error, setError] = useState("");
+  const [activeAuthTab, setActiveAuthTab] = useState("login");
 
-  const [registerForm, setRegisterForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
-
-  const [loginForm, setLoginForm] = useState({
-    username: "",
-    password: "",
-  });
+  const [registerForm, setRegisterForm] = useState({ username: "", email: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
 
   const [reportForm, setReportForm] = useState({
     title: "",
@@ -36,7 +40,7 @@ export default function App() {
 
   const [reportIds, setReportIds] = useState([]);
   const [reportDetail, setReportDetail] = useState(null);
-  const [creatingReport, setCreatingReport] = useState(false);
+  const [isWorking, setIsWorking] = useState(false);
 
   const isAuthenticated = Boolean(token);
 
@@ -65,36 +69,44 @@ export default function App() {
     return data;
   }
 
-  function resetFeedback(message = "Ready") {
-    setError("");
-    setStatus(message);
+  function setFeedback(nextStatus, nextError = "") {
+    setStatus(nextStatus);
+    setError(nextError);
+  }
+
+  function onLogout() {
+    setToken("");
+    localStorage.removeItem(TOKEN_KEY);
+    setReportIds([]);
+    setReportDetail(null);
+    setFeedback("Session closed.");
   }
 
   async function onRegister(event) {
     event.preventDefault();
-    resetFeedback("Creating user...");
+    setIsWorking(true);
+    setFeedback("Creating account...");
 
     try {
-      const payload = {
-        username: registerForm.username,
-        email: registerForm.email,
-        password: registerForm.password,
-      };
       await request("/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(registerForm),
       });
-      setStatus("User created. Now login with that account.");
       setRegisterForm({ username: "", email: "", password: "" });
+      setActiveAuthTab("login");
+      setFeedback("Account created. Please sign in.");
     } catch (err) {
-      setError(`Register failed: ${err.message}`);
+      setFeedback(status, `Register failed: ${err.message}`);
+    } finally {
+      setIsWorking(false);
     }
   }
 
   async function onLogin(event) {
     event.preventDefault();
-    resetFeedback("Authenticating...");
+    setIsWorking(true);
+    setFeedback("Signing in...");
 
     try {
       const data = await request("/auth/login", {
@@ -106,26 +118,65 @@ export default function App() {
       const newToken = data.access_token;
       setToken(newToken);
       localStorage.setItem(TOKEN_KEY, newToken);
-      setStatus("Logged in successfully.");
       setLoginForm({ username: "", password: "" });
+      setFeedback("Welcome. Loading reports...");
+      await onLoadMyReports(newToken);
     } catch (err) {
-      setError(`Login failed: ${err.message}`);
+      setFeedback(status, `Login failed: ${err.message}`);
+    } finally {
+      setIsWorking(false);
     }
   }
 
-  function onLogout() {
-    setToken("");
-    localStorage.removeItem(TOKEN_KEY);
-    setReportIds([]);
-    setReportDetail(null);
-    setStatus("Logged out.");
-    setError("");
+  async function onLoadMyReports(tokenOverride = null) {
+    const headers = tokenOverride ? { Authorization: `Bearer ${tokenOverride}` } : authHeaders;
+    setFeedback("Loading your reports...");
+
+    try {
+      const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/reports/list_reports`, {
+        headers,
+      });
+      const raw = await response.text();
+      const data = parseJsonSafe(raw);
+      if (!response.ok) {
+        throw new Error(data?.detail || raw || `HTTP ${response.status}`);
+      }
+
+      const ids = Array.isArray(data?.ids) ? data.ids : [];
+      setReportIds(ids);
+      setFeedback(`Loaded ${ids.length} reports.`);
+      if (ids.length > 0) {
+        await onLoadReportDetail(ids[0], tokenOverride);
+      }
+    } catch (err) {
+      setFeedback(status, `List reports failed: ${err.message}`);
+    }
+  }
+
+  async function onLoadReportDetail(reportId, tokenOverride = null) {
+    const headers = tokenOverride ? { Authorization: `Bearer ${tokenOverride}` } : authHeaders;
+    setFeedback(`Loading report #${reportId}...`);
+
+    try {
+      const response = await fetch(`${apiBaseUrl.replace(/\/+$/, "")}/reports/${reportId}`, {
+        headers,
+      });
+      const raw = await response.text();
+      const data = parseJsonSafe(raw);
+      if (!response.ok) {
+        throw new Error(data?.detail || raw || `HTTP ${response.status}`);
+      }
+      setReportDetail(data);
+      setFeedback(`Report #${reportId} ready.`);
+    } catch (err) {
+      setFeedback(status, `Load report failed: ${err.message}`);
+    }
   }
 
   async function onCreateReport(event) {
     event.preventDefault();
-    resetFeedback("Generating report...");
-    setCreatingReport(true);
+    setIsWorking(true);
+    setFeedback("Generating report. Please wait...");
 
     try {
       const created = await request("/reports/generate_report", {
@@ -134,149 +185,183 @@ export default function App() {
         body: JSON.stringify(reportForm),
       });
 
-      setStatus(`Report #${created.id} created successfully.`);
       setReportForm({ title: "", prompt: "", chemical_compound: "" });
+      setFeedback(`Report #${created.id} created.`);
       await onLoadMyReports();
       await onLoadReportDetail(created.id);
     } catch (err) {
-      setError(`Create report failed: ${err.message}`);
+      setFeedback(status, `Create report failed: ${err.message}`);
     } finally {
-      setCreatingReport(false);
+      setIsWorking(false);
     }
   }
 
-  async function onLoadMyReports() {
-    resetFeedback("Loading your reports...");
-
-    try {
-      const data = await request("/reports/list_reports");
-      const ids = Array.isArray(data?.ids) ? data.ids : [];
-      setReportIds(ids);
-      setStatus(`Loaded ${ids.length} reports.`);
-    } catch (err) {
-      setError(`List reports failed: ${err.message}`);
+  useEffect(() => {
+    if (token) {
+      onLoadMyReports();
     }
-  }
+  }, [token]);
 
-  async function onLoadReportDetail(reportId) {
-    resetFeedback(`Loading report #${reportId}...`);
+  if (!isAuthenticated) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="brand-side">
+            <img src={logo} alt="ChemReport logo" className="brand-logo" />
+            <p className="kicker">Chemical Intelligence</p>
+            <h1>ChemReport Studio</h1>
+            <p className="subtitle">Generate, store, and review your chemical reports in one workspace.</p>
+          </div>
 
-    try {
-      const data = await request(`/reports/${reportId}`);
-      setReportDetail(data);
-      setStatus(`Report #${reportId} loaded.`);
-    } catch (err) {
-      setError(`Load report failed: ${err.message}`);
-    }
+          <div className="auth-side">
+            <div className="api-group">
+              <label htmlFor="apiBaseUrl">API Base URL</label>
+              <input
+                id="apiBaseUrl"
+                value={apiBaseUrl}
+                onChange={(e) => setApiBaseUrl(e.target.value)}
+                placeholder="http://127.0.0.1:8000/api/v1"
+              />
+            </div>
+
+            <div className="tabs">
+              <button
+                type="button"
+                className={activeAuthTab === "login" ? "tab active" : "tab"}
+                onClick={() => setActiveAuthTab("login")}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={activeAuthTab === "register" ? "tab active" : "tab"}
+                onClick={() => setActiveAuthTab("register")}
+              >
+                Create Account
+              </button>
+            </div>
+
+            {activeAuthTab === "login" ? (
+              <form className="form" onSubmit={onLogin}>
+                <label>Username</label>
+                <input
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))}
+                  placeholder="username"
+                  required
+                />
+                <label>Password</label>
+                <input
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
+                  placeholder="password"
+                  required
+                />
+                <button type="submit" disabled={isWorking}>
+                  {isWorking ? "Signing In..." : "Sign In"}
+                </button>
+              </form>
+            ) : (
+              <form className="form" onSubmit={onRegister}>
+                <label>Username</label>
+                <input
+                  value={registerForm.username}
+                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, username: e.target.value }))}
+                  placeholder="username"
+                  required
+                />
+                <label>Email</label>
+                <input
+                  type="email"
+                  value={registerForm.email}
+                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="email"
+                  required
+                />
+                <label>Password</label>
+                <input
+                  type="password"
+                  value={registerForm.password}
+                  onChange={(e) => setRegisterForm((prev) => ({ ...prev, password: e.target.value }))}
+                  placeholder="password"
+                  minLength={8}
+                  required
+                />
+                <button type="submit" disabled={isWorking}>
+                  {isWorking ? "Creating..." : "Create Account"}
+                </button>
+              </form>
+            )}
+
+            <p className="status">{status}</p>
+            {error && <p className="error">{error}</p>}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <h1>Chemical Reports</h1>
-        <div className="api-box">
-          <label htmlFor="apiBaseUrl">API</label>
-          <input
-            id="apiBaseUrl"
-            value={apiBaseUrl}
-            onChange={(e) => setApiBaseUrl(e.target.value)}
-            placeholder="http://127.0.0.1:8000/api/v1"
-          />
+    <div className="dashboard-shell">
+      <header className="dashboard-topbar">
+        <div className="brand-inline">
+          <img src={logo} alt="ChemReport logo" className="brand-logo-small" />
+          <div>
+            <p className="kicker">Chemical Intelligence</p>
+            <h2>ChemReport Studio</h2>
+          </div>
+        </div>
+        <div className="top-actions">
+          <button className="secondary" type="button" onClick={() => onLoadMyReports()}>
+            Refresh Reports
+          </button>
+          <button className="danger" type="button" onClick={onLogout}>
+            Logout
+          </button>
         </div>
       </header>
 
-      <main className="grid">
-        <section className="card">
-          <h2>Create User</h2>
-          <form className="form" onSubmit={onRegister}>
-            <input
-              value={registerForm.username}
-              onChange={(e) => setRegisterForm((prev) => ({ ...prev, username: e.target.value }))}
-              placeholder="username"
-              required
-            />
-            <input
-              type="email"
-              value={registerForm.email}
-              onChange={(e) => setRegisterForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="email"
-              required
-            />
-            <input
-              type="password"
-              value={registerForm.password}
-              onChange={(e) => setRegisterForm((prev) => ({ ...prev, password: e.target.value }))}
-              placeholder="password"
-              minLength={8}
-              required
-            />
-            <button type="submit">Create User</button>
-          </form>
-        </section>
-
-        <section className="card">
-          <h2>Login</h2>
-          <form className="form" onSubmit={onLogin}>
-            <input
-              value={loginForm.username}
-              onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))}
-              placeholder="username"
-              required
-            />
-            <input
-              type="password"
-              value={loginForm.password}
-              onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
-              placeholder="password"
-              required
-            />
-            <button type="submit">Login</button>
-          </form>
-          <div className="auth-row">
-            <span>{isAuthenticated ? "Authenticated" : "Not authenticated"}</span>
-            <button type="button" className="secondary" onClick={onLogout} disabled={!isAuthenticated}>
-              Logout
-            </button>
+      <main className="dashboard-grid">
+        <section className="panel panel-wide">
+          <div className="panel-head">
+            <h3>Create New Report</h3>
           </div>
-        </section>
-
-        <section className="card card-wide">
-          <h2>Create Report</h2>
           <form className="form" onSubmit={onCreateReport}>
+            <label>Title</label>
             <input
               value={reportForm.title}
               onChange={(e) => setReportForm((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="title"
+              placeholder="e.g. Glucose Stability Analysis"
               required
-              disabled={!isAuthenticated || creatingReport}
+              disabled={isWorking}
             />
+            <label>Chemical Compound</label>
             <input
               value={reportForm.chemical_compound}
               onChange={(e) => setReportForm((prev) => ({ ...prev, chemical_compound: e.target.value }))}
-              placeholder="chemical compound (e.g. H2O)"
+              placeholder="e.g. C6H12O6"
               required
-              disabled={!isAuthenticated || creatingReport}
+              disabled={isWorking}
             />
+            <label>Prompt</label>
             <textarea
               value={reportForm.prompt}
               onChange={(e) => setReportForm((prev) => ({ ...prev, prompt: e.target.value }))}
-              placeholder="prompt"
-              rows={4}
+              placeholder="Write what you need from the report"
+              rows={5}
               required
-              disabled={!isAuthenticated || creatingReport}
+              disabled={isWorking}
             />
-            <button type="submit" disabled={!isAuthenticated || creatingReport}>
-              {creatingReport ? "Generating..." : "Generate Report"}
+            <button type="submit" disabled={isWorking}>
+              {isWorking ? "Generating..." : "Generate Report"}
             </button>
           </form>
         </section>
 
-        <section className="card">
-          <div className="card-header">
-            <h2>My Reports</h2>
-            <button type="button" onClick={onLoadMyReports} disabled={!isAuthenticated}>
-              Refresh
-            </button>
+        <section className="panel">
+          <div className="panel-head">
+            <h3>My Reports</h3>
           </div>
           <ul className="list">
             {reportIds.map((id) => (
@@ -286,20 +371,21 @@ export default function App() {
                 </button>
               </li>
             ))}
-            {reportIds.length === 0 && <li>No reports loaded.</li>}
+            {reportIds.length === 0 && <li>No reports yet.</li>}
           </ul>
         </section>
 
-        <section className="card card-wide">
-          <h2>Report Detail</h2>
-          {!reportDetail && <p>Select a report to review its content and metadata.</p>}
+        <section className="panel panel-wide">
+          <div className="panel-head">
+            <h3>Report Review</h3>
+          </div>
+          {!reportDetail && <p>Select a report ID from the list to review previous report data.</p>}
           {reportDetail && (
             <article className="report-detail">
               <p><strong>ID:</strong> {reportDetail.id}</p>
               <p><strong>Title:</strong> {reportDetail.title}</p>
-              <p><strong>User ID:</strong> {reportDetail.user_id}</p>
               <p><strong>Chemical:</strong> {reportDetail.chemical_compound}</p>
-              <p><strong>Created:</strong> {new Date(reportDetail.created_at).toLocaleString()}</p>
+              <p><strong>Created:</strong> {formatDate(reportDetail.created_at)}</p>
               <p><strong>Tokens:</strong> {reportDetail.tokens_used}</p>
               <p>
                 <strong>PDF:</strong>{" "}
@@ -307,17 +393,25 @@ export default function App() {
                   Download
                 </a>
               </p>
-              <p><strong>Prompt:</strong></p>
-              <pre>{reportDetail.prompt}</pre>
-              <p><strong>Content:</strong></p>
-              <pre>{reportDetail.content}</pre>
+              <h4>Prompt</h4>
+              <div className="markdown-body prompt-body">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {reportDetail.prompt || ""}
+                </ReactMarkdown>
+              </div>
+              <h4>Content</h4>
+              <div className="markdown-body">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {reportDetail.content || ""}
+                </ReactMarkdown>
+              </div>
             </article>
           )}
         </section>
       </main>
 
-      <footer className="footer">
-        <p className="status">Status: {status}</p>
+      <footer className="dashboard-footer">
+        <p className="status">{status}</p>
         {error && <p className="error">{error}</p>}
       </footer>
     </div>

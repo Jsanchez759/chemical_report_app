@@ -1,14 +1,14 @@
 # web
 
-Minimal Vite + React user frontend.
+ChemReport Studio: user-facing Vite + React frontend.
 
 ## Features
-- Create user account
-- Login
-- Create report
-- List your report IDs
-- Load and review full report history by report ID
-- Open generated PDF URL
+- Dedicated auth experience (Sign In / Create Account)
+- Dashboard blocked until authentication
+- Create new report
+- List your previous reports
+- Review full report data + metadata
+- Open generated PDF
 
 ## Run
 
@@ -18,10 +18,10 @@ npm install
 npm run dev
 ```
 
-Default app URL:
+Open:
 - `http://127.0.0.1:5173`
 
-By default it points to:
+Default API base URL:
 - `http://127.0.0.1:8000/api/v1`
 
-You can change API base URL from the UI input.
+You can change API base URL directly in the auth page.
