@@ -1,3 +1,5 @@
+import "./styles.css";
+
 const TOKEN_KEY = "chemops_admin_token";
 
 let accessToken = localStorage.getItem(TOKEN_KEY) || "";
