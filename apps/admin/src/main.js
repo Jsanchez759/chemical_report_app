@@ -1,6 +1,7 @@
 import "./styles.css";
 
 const TOKEN_KEY = "chemops_admin_token";
+const API_BASE_URL = "https://chemical-report-app.onrender.com/api/v1";
 
 let accessToken = localStorage.getItem(TOKEN_KEY) || "";
 
@@ -11,7 +12,6 @@ const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const authStatus = document.getElementById("authStatus");
 const dashboardStatus = document.getElementById("dashboardStatus");
-const apiBaseUrlInput = document.getElementById("apiBaseUrl");
 const sessionInfo = document.getElementById("sessionInfo");
 
 const loadUsersBtn = document.getElementById("loadUsersBtn");
@@ -22,7 +22,7 @@ const userReportsTbody = document.getElementById("userReportsTbody");
 const userReportsTitle = document.getElementById("userReportsTitle");
 
 function getApiBaseUrl() {
-  return apiBaseUrlInput.value.trim().replace(/\/+$/, "");
+  return API_BASE_URL.trim().replace(/\/+$/, "");
 }
 
 function setAuthStatus(message, isError = false) {

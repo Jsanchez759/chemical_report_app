@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 
 import logo from "./assets/logo.svg";
 
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1";
+const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://chemical-report-app.onrender.com/api/v1";
 const TOKEN_KEY = "chemreport_user_token";
 
 function parseJsonSafe(text) {
@@ -289,13 +289,6 @@ export default function App() {
 
           <div className="auth-side">
             <div className="api-group">
-              <label htmlFor="apiBaseUrl">API Base URL</label>
-              <input
-                id="apiBaseUrl"
-                value={apiBaseUrl}
-                onChange={(e) => setApiBaseUrl(e.target.value)}
-                placeholder="http://127.0.0.1:8000/api/v1"
-              />
             </div>
 
             <div className="tabs">
