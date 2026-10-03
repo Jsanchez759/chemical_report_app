@@ -5,6 +5,11 @@ import logo from './assets/logo.svg';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || 'https://chemical-report-app.onrender.com/api/v1').replace(/\/+$/, '');
 const TOKEN_KEY = 'chemreport_user_token';
+const CHAT_SUGGESTIONS = [
+  'Summarize the key findings',
+  'What limitations should I consider?',
+  'Which conditions affect stability?',
+];
 
 function formatDate(value, compact = false) {
   if (!value) return '—';
@@ -387,21 +392,41 @@ export default function App() {
                 <div className="reader-body markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedReport.content || ''}</ReactMarkdown></div>
               </article>
               <aside className="report-chat" aria-label="Questions about this report">
-                <div className="chat-heading"><div><h2>Ask about this report</h2><p>Keep the conversation close to the source.</p></div><span className="chat-spark" aria-hidden="true">⌁</span></div>
+                <div className="chat-heading">
+                  <div>
+                    <p className="chat-eyebrow">REPORT ASSISTANT</p>
+                    <h2>Explore this report</h2>
+                    <p>Answers are grounded in the report shown here.</p>
+                  </div>
+                  <span className="chat-spark" aria-hidden="true">✳</span>
+                </div>
                 <div className="chat-thread" aria-live="polite">
                   {chatLoading && <p className="chat-empty">Loading conversation…</p>}
-                  {!chatLoading && chatMessages.length === 0 && <div className="chat-empty"><strong>Where would you like to go deeper?</strong><p>Ask for a clarification, a limitation, or a comparison from this report.</p></div>}
+                  {!chatLoading && chatMessages.length === 0 && <div className="chat-empty">
+                    <span className="chat-empty-icon" aria-hidden="true">↗</span>
+                    <strong>What would you like to understand?</strong>
+                    <p>Ask a follow-up about the findings, evidence, or limitations in this report.</p>
+                    <div className="chat-suggestions" aria-label="Suggested questions">
+                      {CHAT_SUGGESTIONS.map((suggestion) => (
+                        <button key={suggestion} type="button" onClick={() => setChatInput(suggestion)} disabled={chatSending}>{suggestion}</button>
+                      ))}
+                    </div>
+                  </div>}
                   {chatMessages.map((message) => (
                     <div key={message.id} className={'chat-message ' + (message.role === 'assistant' ? 'assistant' : 'user')}>
-                      <div className="chat-message-meta"><strong>{message.role === 'assistant' ? 'ChemReport' : 'You'}</strong><time>{formatDate(message.created_at, true)}</time></div>
+                      <div className="chat-message-meta"><strong>{message.role === 'assistant' ? 'Report assistant' : 'You'}</strong><time>{formatDate(message.created_at, true)}</time></div>
                       <div className="markdown-body"><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown></div>
                     </div>
                   ))}
+                  {chatSending && <div className="chat-message assistant chat-typing" role="status" aria-label="Preparing an answer"><div className="chat-message-meta"><strong>Report assistant</strong><span>Preparing answer</span></div><span className="typing-dots" aria-hidden="true"><i /><i /><i /></span></div>}
                 </div>
                 <form className="chat-composer" onSubmit={sendChat}>
-                  <label htmlFor="chat-question">Your question</label>
-                  <textarea id="chat-question" rows={4} maxLength={1200} value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="What does the report say about…?" disabled={chatSending} />
-                  <button type="submit" className="button button-primary" disabled={chatSending || !chatInput.trim()}>{chatSending ? 'Sending…' : 'Ask question'}</button>
+                  <label htmlFor="chat-question">Ask a follow-up</label>
+                  <textarea id="chat-question" rows={3} maxLength={1200} value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Ask about a finding, method, or limitation…" disabled={chatSending} />
+                  <div className="chat-composer-footer">
+                    <span className="chat-character-count">{chatInput.length} / 1200</span>
+                    <button type="submit" className="button button-primary" disabled={chatSending || !chatInput.trim()}>{chatSending ? 'Thinking…' : 'Send question'}<span aria-hidden="true"> ↗</span></button>
+                  </div>
                 </form>
               </aside>
             </div>
