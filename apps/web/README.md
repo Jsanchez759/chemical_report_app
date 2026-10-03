@@ -9,6 +9,8 @@ ChemReport Studio: user-facing Vite + React frontend.
 - List your previous reports
 - Review full report data + metadata
 - Open generated PDF
+- Ask follow-up questions about a saved report
+- Search reports by title or compound
 
 ## Run
 
@@ -21,7 +23,4 @@ npm run dev
 Open:
 - `http://127.0.0.1:5173`
 
-Default API base URL:
-- `http://127.0.0.1:8000/api/v1`
-
-You can change API base URL directly in the auth page.
+For local API development, run `VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1 npm run dev`. Otherwise the app uses the hosted API. The model provider key is configured only on the backend.

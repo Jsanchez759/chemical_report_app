@@ -1,26 +1,22 @@
 from fastapi import Request
 from slowapi import Limiter
+from app.core.security import decode_token
 
 
-def _get_client_ip(request: Request) -> str:
-    forwarded_for = (request.headers.get("x-forwarded-for") or "").strip()
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
+def _rate_limit_key(request: Request) -> str:
+    authorization = request.headers.get("authorization", "")
+    if authorization.lower().startswith("bearer "):
+        payload = decode_token(authorization[7:].strip())
+        if payload and payload.get("type") == "access" and payload.get("user_id"):
+            return "user:" + str(payload["user_id"])
 
-    real_ip = (request.headers.get("x-real-ip") or "").strip()
-    if real_ip:
-        return real_ip
-
-    cf_ip = (request.headers.get("cf-connecting-ip") or "").strip()
-    if cf_ip:
-        return cf_ip
-
+    # Do not trust client-provided forwarding headers for unauthenticated requests.
     if request.client and request.client.host:
-        return request.client.host
-    return "127.0.0.1"
+        return "ip:" + request.client.host
+    return "ip:unknown"
 
 
 limiter = Limiter(
-    key_func=_get_client_ip,
+    key_func=_rate_limit_key,
     default_limits=["100/minute", "1000/day"],
 )

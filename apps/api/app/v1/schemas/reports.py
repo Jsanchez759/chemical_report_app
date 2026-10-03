@@ -8,15 +8,23 @@ class GetReportsRequest(BaseModel):
     )
 
 
+class ReportListItem(BaseModel):
+    id: int
+    title: str
+    chemical_compound: str
+    created_at: datetime
+
+
 class GetReportsResponse(BaseModel):
     ids: list[int]
     reports_urls: list[str]
+    reports: list[ReportListItem] = Field(default_factory=list)
 
 
 class ChemicalReportRequest(BaseModel):
     title: str = Field(..., min_length=1, max_length=255)
-    prompt: str = Field(..., min_length=1)
-    chemical_compound: str = Field(..., min_length=1)
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    chemical_compound: str = Field(..., min_length=1, max_length=255)
     
     class Config:
         json_schema_extra = {
@@ -66,7 +74,7 @@ class ReportDetailResponse(BaseModel):
 
 
 class ReportChatRequest(BaseModel):
-    message: str = Field(..., min_length=1, description="User message for report chat")
+    message: str = Field(..., min_length=1, max_length=1200, description="User message for report chat")
 
 
 class ReportChatResponse(BaseModel):

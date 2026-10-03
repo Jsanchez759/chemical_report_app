@@ -1,7 +1,7 @@
 import "./styles.css";
 
 const TOKEN_KEY = "chemops_admin_token";
-const API_BASE_URL = "https://chemical-report-app.onrender.com/api/v1";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://chemical-report-app.onrender.com/api/v1";
 
 let accessToken = localStorage.getItem(TOKEN_KEY) || "";
 
@@ -13,6 +13,8 @@ const logoutBtn = document.getElementById("logoutBtn");
 const authStatus = document.getElementById("authStatus");
 const dashboardStatus = document.getElementById("dashboardStatus");
 const sessionInfo = document.getElementById("sessionInfo");
+const usersCount = document.getElementById("usersCount");
+const reportsCount = document.getElementById("reportsCount");
 
 const loadUsersBtn = document.getElementById("loadUsersBtn");
 const loadReportsBtn = document.getElementById("loadReportsBtn");
@@ -44,7 +46,9 @@ function clearTables() {
   usersTbody.innerHTML = "";
   allReportsTbody.innerHTML = "";
   userReportsTbody.innerHTML = "";
-  userReportsTitle.textContent = "Reports By User";
+  userReportsTitle.textContent = "Reports by user";
+  usersCount.textContent = "—";
+  reportsCount.textContent = "—";
 }
 
 function logout() {
@@ -89,34 +93,69 @@ function formatDate(value) {
   return date.toLocaleString();
 }
 
+function appendCell(row, value) {
+  const cell = document.createElement("td");
+  cell.textContent = value == null ? "—" : String(value);
+  row.appendChild(cell);
+  return cell;
+}
+
+function appendPdfCell(row, value) {
+  const cell = document.createElement("td");
+  try {
+    if (!value) throw new Error("Missing PDF URL");
+    const url = new URL(value, getApiBaseUrl());
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error("Unsupported URL");
+    const link = document.createElement("a");
+    link.href = url.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "Open PDF";
+    cell.appendChild(link);
+  } catch {
+    cell.textContent = "—";
+  }
+  row.appendChild(cell);
+}
+
+function appendEmptyRow(tbody, columns, message) {
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  cell.colSpan = columns;
+  cell.className = "empty-cell";
+  cell.textContent = message;
+  row.appendChild(cell);
+  tbody.appendChild(row);
+}
+
 function renderUsers(users) {
   usersTbody.innerHTML = "";
 
   for (const user of users) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${user.id}</td>
-      <td>${user.username}</td>
-      <td>${user.email}</td>
-      <td>${user.role}</td>
-      <td>${user.reports_count}</td>
-      <td>${formatDate(user.created_at)}</td>
-      <td>
-        <button class="inline-btn" data-user-id="${user.id}" data-username="${user.username}">
-          View Reports
-        </button>
-      </td>
-    `;
+    appendCell(tr, user.id);
+    appendCell(tr, user.username);
+    appendCell(tr, user.email);
+    appendCell(tr, user.role);
+    appendCell(tr, user.reports_count);
+    appendCell(tr, formatDate(user.created_at));
+    const actionCell = document.createElement("td");
+    const button = document.createElement("button");
+    button.className = "inline-btn";
+    button.type = "button";
+    button.textContent = "View reports";
+    button.addEventListener("click", async () => {
+      try {
+        await loadReportsByUser(user.id, user.username);
+      } catch (error) {
+        setDashboardStatus("Could not load this user's reports: " + error.message, true);
+      }
+    });
+    actionCell.appendChild(button);
+    tr.appendChild(actionCell);
     usersTbody.appendChild(tr);
   }
-
-  usersTbody.querySelectorAll("button[data-user-id]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const userId = btn.dataset.userId;
-      const username = btn.dataset.username;
-      await loadReportsByUser(userId, username);
-    });
-  });
+  if (users.length === 0) appendEmptyRow(usersTbody, 7, "No users to show.");
 }
 
 function renderAllReports(reports) {
@@ -124,44 +163,44 @@ function renderAllReports(reports) {
 
   for (const report of reports) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${report.id}</td>
-      <td>${report.username} (#${report.user_id})</td>
-      <td>${report.title}</td>
-      <td>${report.tokens_used}</td>
-      <td>${formatDate(report.created_at)}</td>
-      <td><a href="${report.pdf_url}" target="_blank" rel="noopener noreferrer">Download</a></td>
-    `;
+    appendCell(tr, report.id);
+    appendCell(tr, report.username + " (#" + report.user_id + ")");
+    appendCell(tr, report.title);
+    appendCell(tr, report.tokens_used + " words");
+    appendCell(tr, formatDate(report.created_at));
+    appendPdfCell(tr, report.pdf_url);
     allReportsTbody.appendChild(tr);
   }
+  if (reports.length === 0) appendEmptyRow(allReportsTbody, 6, "No reports to show.");
 }
 
 function renderUserReports(reports, username) {
-  userReportsTitle.textContent = `Reports By User: ${username}`;
+  userReportsTitle.textContent = "Reports by " + username;
   userReportsTbody.innerHTML = "";
 
   for (const report of reports) {
     const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${report.id}</td>
-      <td>${report.title}</td>
-      <td>${formatDate(report.created_at)}</td>
-      <td><a href="${report.pdf_url}" target="_blank" rel="noopener noreferrer">Download</a></td>
-    `;
+    appendCell(tr, report.id);
+    appendCell(tr, report.title);
+    appendCell(tr, formatDate(report.created_at));
+    appendPdfCell(tr, report.pdf_url);
     userReportsTbody.appendChild(tr);
   }
+  if (reports.length === 0) appendEmptyRow(userReportsTbody, 4, "This user has no reports.");
 }
 
 async function loadUsers() {
   const data = await apiRequest("/admin/users?limit=100&offset=0");
   renderUsers(data.users || []);
-  sessionInfo.textContent = `Authenticated · ${data.total} users total`;
+  usersCount.textContent = data.total;
+  sessionInfo.textContent = "Admin workspace";
   setDashboardStatus("Users loaded.");
 }
 
 async function loadAllReports() {
   const data = await apiRequest("/admin/reports?limit=100&offset=0");
   renderAllReports(data.reports || []);
+  reportsCount.textContent = data.total;
   setDashboardStatus(`All reports loaded (${data.total} total).`);
 }
 

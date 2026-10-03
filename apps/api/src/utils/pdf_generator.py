@@ -55,30 +55,26 @@ def _register_fonts() -> tuple[str, str]:
 
 
 def _draw_logo(canvas, x: float, y: float, size: float) -> None:
-    # Keep same visual language as the web/admin logo.
     canvas.saveState()
-    canvas.setFillColor(colors.HexColor("#0369A1"))
-    canvas.roundRect(x, y, size, size, radius=size * 0.2, stroke=0, fill=1)
+    teal = colors.HexColor("#1B7778")
+    canvas.setFillColor(colors.HexColor("#E7F3F0"))
+    canvas.setStrokeColor(teal)
+    canvas.setLineWidth(1)
+    canvas.roundRect(x, y, size, size, radius=size * 0.18, stroke=1, fill=1)
 
     canvas.setFillColor(colors.white)
-    canvas.rect(x + size * 0.25, y + size * 0.70, size * 0.5, size * 0.09, stroke=0, fill=1)
-
-    path = canvas.beginPath()
-    path.moveTo(x + size * 0.36, y + size * 0.70)
-    path.lineTo(x + size * 0.36, y + size * 0.50)
-    path.lineTo(x + size * 0.27, y + size * 0.24)
-    path.lineTo(x + size * 0.73, y + size * 0.24)
-    path.lineTo(x + size * 0.64, y + size * 0.50)
-    path.lineTo(x + size * 0.64, y + size * 0.70)
-    path.close()
-    canvas.drawPath(path, stroke=0, fill=1)
-
-    canvas.setStrokeColor(colors.HexColor("#0369A1"))
-    canvas.setLineWidth(1.8)
-    canvas.line(x + size * 0.31, y + size * 0.41, x + size * 0.69, y + size * 0.41)
-    canvas.circle(x + size * 0.38, y + size * 0.49, size * 0.03, stroke=0, fill=1)
-    canvas.circle(x + size * 0.55, y + size * 0.53, size * 0.03, stroke=0, fill=1)
-    canvas.circle(x + size * 0.63, y + size * 0.45, size * 0.025, stroke=0, fill=1)
+    canvas.roundRect(x + size * 0.28, y + size * 0.2, size * 0.45, size * 0.62, radius=1, stroke=1, fill=1)
+    canvas.setLineWidth(1.2)
+    canvas.line(x + size * 0.38, y + size * 0.51, x + size * 0.48, y + size * 0.63)
+    canvas.line(x + size * 0.48, y + size * 0.63, x + size * 0.62, y + size * 0.53)
+    canvas.setFillColor(teal)
+    for cx, cy in ((0.38, 0.51), (0.48, 0.63)):
+        canvas.circle(x + size * cx, y + size * cy, size * 0.035, stroke=0, fill=1)
+    canvas.setFillColor(colors.HexColor("#C9855A"))
+    canvas.circle(x + size * 0.62, y + size * 0.53, size * 0.035, stroke=0, fill=1)
+    canvas.setStrokeColor(colors.HexColor("#9BC5BD"))
+    canvas.line(x + size * 0.38, y + size * 0.38, x + size * 0.62, y + size * 0.38)
+    canvas.line(x + size * 0.38, y + size * 0.31, x + size * 0.55, y + size * 0.31)
     canvas.restoreState()
 
 
@@ -91,7 +87,7 @@ def _build_styles(font_body: str, font_bold: str) -> dict[str, ParagraphStyle]:
             fontName=font_bold,
             fontSize=20,
             leading=24,
-            textColor=colors.HexColor("#0B4D76"),
+            textColor=colors.HexColor("#10383E"),
             spaceAfter=10,
         ),
         "section": ParagraphStyle(
@@ -100,7 +96,7 @@ def _build_styles(font_body: str, font_bold: str) -> dict[str, ParagraphStyle]:
             fontName=font_bold,
             fontSize=12.5,
             leading=16,
-            textColor=colors.HexColor("#0B4D76"),
+            textColor=colors.HexColor("#1B7778"),
             spaceBefore=10,
             spaceAfter=6,
         ),
@@ -110,7 +106,7 @@ def _build_styles(font_body: str, font_bold: str) -> dict[str, ParagraphStyle]:
             fontName=font_body,
             fontSize=10.5,
             leading=15,
-            textColor=colors.HexColor("#1F2937"),
+            textColor=colors.HexColor("#263E42"),
             spaceAfter=5,
         ),
         "bullet": ParagraphStyle(
@@ -119,7 +115,7 @@ def _build_styles(font_body: str, font_bold: str) -> dict[str, ParagraphStyle]:
             fontName=font_body,
             fontSize=10.5,
             leading=15,
-            textColor=colors.HexColor("#1F2937"),
+            textColor=colors.HexColor("#263E42"),
             leftIndent=14,
             bulletIndent=6,
             spaceAfter=3,
@@ -135,19 +131,19 @@ def _draw_header_footer(canvas, doc, title: str) -> None:
     _draw_logo(canvas, x=doc.leftMargin, y=logo_y, size=22)
 
     canvas.setFont("Helvetica-Bold", 10)
-    canvas.setFillColor(colors.HexColor("#0B4D76"))
+    canvas.setFillColor(colors.HexColor("#10383E"))
     canvas.drawString(doc.leftMargin + 1, logo_y - 10, "ChemReport Studio")
 
     canvas.setFont("Helvetica", 8.5)
-    canvas.setFillColor(colors.HexColor("#475569"))
+    canvas.setFillColor(colors.HexColor("#5B7575"))
     canvas.drawString(doc.leftMargin + 1, logo_y - 20, title[:95])
 
-    canvas.setStrokeColor(colors.HexColor("#D9E3EF"))
+    canvas.setStrokeColor(colors.HexColor("#D7E4E2"))
     canvas.setLineWidth(0.8)
     canvas.line(doc.leftMargin, logo_y - 27, width - doc.rightMargin, logo_y - 27)
 
     canvas.setFont("Helvetica", 8)
-    canvas.setFillColor(colors.HexColor("#64748B"))
+    canvas.setFillColor(colors.HexColor("#5B7575"))
     page_number = canvas.getPageNumber()
     footer = f"Page {page_number}"
     canvas.drawRightString(width - doc.rightMargin, 0.45 * inch, footer)
@@ -159,7 +155,7 @@ def _markdown_inline_to_richtext(text: str) -> str:
 
     escaped = re.sub(
         r"\[([^\]]+)\]\((https?://[^)\s]+)\)",
-        r'<a href="\2" color="#0B4D76">\1</a>',
+        r'<a href="\2" color="#1B7778">\1</a>',
         escaped,
     )
     escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
@@ -229,26 +225,26 @@ def generate_pdf_and_get_url(
     )
 
     story: list = []
-    story.append(Paragraph(title, styles["title"]))
+    story.append(Paragraph(escape(title), styles["title"]))
     story.append(Paragraph(f"Report #{report_id}", styles["body"]))
     story.append(Spacer(1, 8))
 
     metadata_rows = [
         ["Generated At", generated_at],
         ["Chemical Compound", chemical_compound or "N/A"],
-        ["Tokens Used", str(tokens_used if tokens_used is not None else "N/A")],
+        ["Report length", f"{tokens_used:,} words" if tokens_used is not None else "N/A"],
     ]
     metadata_table = Table(metadata_rows, colWidths=[1.75 * inch, 4.7 * inch])
     metadata_table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#E6F2FB")),
-                ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#1F2937")),
+                ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#E8F2F0")),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.HexColor("#263E42")),
                 ("FONTNAME", (0, 0), (0, -1), font_bold),
                 ("FONTNAME", (1, 0), (1, -1), font_body),
                 ("FONTSIZE", (0, 0), (-1, -1), 10),
-                ("INNERGRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#C5D7E8")),
-                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#C5D7E8")),
+                ("INNERGRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#D7E4E2")),
+                ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#D7E4E2")),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 6),

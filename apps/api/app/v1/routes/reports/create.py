@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.post("/generate_report", response_model=ChemicalReportResponse)
-@limiter.limit("10/minute")
+@limiter.limit("3/minute;20/day")
 async def generate_report(
     request: Request,
     report_request: ChemicalReportRequest,
@@ -26,7 +26,7 @@ async def generate_report(
     logger.info(
         "generate_report_started",
         title=report_request.title,
-        prompt=report_request.prompt
+        prompt_length=len(report_request.prompt),
     )
     
     try:

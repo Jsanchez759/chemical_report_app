@@ -13,3 +13,4 @@ structlog
 openai
 email-validator
 psycopg2-binary
+psycopg[binary]>=3.3.3

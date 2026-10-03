@@ -35,7 +35,7 @@ def _build_chat_prompt(*, report: UserReport, history: list[ReportChatMessage], 
 
 
 @router.post("/{report_id}/chat", response_model=ReportChatResponse)
-@limiter.limit("30/minute")
+@limiter.limit("10/minute;100/day")
 async def chat_with_report(
     request: Request,
     report_id: int,

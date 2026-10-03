@@ -6,7 +6,7 @@ from app.models.reports_users import UserReport
 from app.models.user import User
 from app.services import get_db, limiter
 from app.v1.dependencies.auth import get_current_user
-from app.v1.schemas.reports import GetReportsRequest, GetReportsResponse
+from app.v1.schemas.reports import GetReportsRequest, GetReportsResponse, ReportListItem
 
 logger = get_logger(__name__)
 
@@ -41,7 +41,19 @@ async def list_reports(
             report_count=len(report_ids),
         )
         
-        return GetReportsResponse(ids=report_ids, reports_urls=report_urls)
+        return GetReportsResponse(
+            ids=report_ids,
+            reports_urls=report_urls,
+            reports=[
+                ReportListItem(
+                    id=report.id,
+                    title=report.title,
+                    chemical_compound=report.chemical_compound,
+                    created_at=report.created_at,
+                )
+                for report in reports
+            ],
+        )
     
     except Exception as exc:
         logger.error(
